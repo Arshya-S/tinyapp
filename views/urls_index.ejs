@@ -24,6 +24,7 @@
           <tr>
             <th scope="col">Short URL ID</th>
             <th scope="col">Long URL</th>
+            <th scope="col">Delete</th>
           </tr>
         </thead>
         <tbody>
@@ -31,10 +32,14 @@
             <tr>
               <td><%= id %></td>
               <td><%= urls[id] %></td>
+              <form method="POST" action="/urls/<%= id %>/delete">
+                <td><button type="submit">Delete</button></td>
+              </form>
             </tr>
           <% } %>
         </tbody>
       </table>
+      
     </main>
     <!-- Bootstrap JS -->
     <script

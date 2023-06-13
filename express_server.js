@@ -21,7 +21,7 @@ const urlDatabase = {
 };
 
 app.get("/", (req, res) => {
-  res.send("Hello!");
+  res.render("partials/_header.ejs");
 });
 
 app.get("/urls.json", (req, res) => {
@@ -56,6 +56,11 @@ app.get("/u/:id", (req, res) => {
   // const longURL = ...
   const longURL = urlDatabase[req.params.id];
   res.redirect(longURL);
+});
+
+app.post("/urls/:id/delete", (req,res) => {
+  delete urlDatabase[req.params.id];
+  res.redirect("/urls");
 });
 
 
