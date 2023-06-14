@@ -7,18 +7,8 @@ app.use(cookieParser());
 
 // Function to generate random 6 digit alpha-numeric code
 function generateRandomString() {
-  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let result = '';
-
-  for (let i = 0; i < 6; i++) {
-    const random = Math.floor(Math.random() * characters.length);
-    result += characters[random];
-  }
-
-  return result;
+  return Math.random().toString(36).substring(2,5);
 };
-
-
 
 app.set("view engine", "ejs");
 app.use(express.urlencoded({ extended: true }));
@@ -96,7 +86,7 @@ app.post("/register", (req, res) => {
   };
 
   res.cookie('user_id', randomID); 
-  res.redirect("/urls")
+  res.redirect("/urls");
 });
 
 app.get("/urls/:id", (req, res) => {
