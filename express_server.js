@@ -58,8 +58,15 @@ app.get("/urls.json", (req, res) => {
 });
 
 app.post("/login", (req, res) => {
-  res.cookie('username', req.body.username); 
   res.redirect("/urls");
+});
+
+
+app.get("/login", (req,res) => {
+  const templateVars = {
+    user: users[req.cookies['user_id']]
+  }
+  res.render("urls_login", templateVars);
 });
 
 app.post("/logout", (req, res) => {
