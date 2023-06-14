@@ -4,8 +4,6 @@ const app = express();
 const PORT = 8080; // default port 8080
 
 
-
-
 app.set("view engine", "ejs");
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -42,25 +40,42 @@ function userIndentifier(emailInput) {
   return foundUser;
 }
 
-
 // Function to generate random 6 digit alpha-numeric code
 function generateRandomString() {
   return Math.random().toString(36).substring(2,5);
 };
 
 
+
+
+// Home Page
 app.get("/", (req, res) => {
   res.render("partials/_header.ejs");
 });
 
+
+// JSON Data
 app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
 });
 
+
+// Routing for /login
 app.post("/login", (req, res) => {
+  const userEmail = req.body.email;
+  const userPass = req.body.password;
+  
+  if (!userIndentifier(userEmail)) {
+    return res.status(403).send("Email cannot be found");
+  } 
+
+  if (userIndentifier(userEmail).password !== userPass) {
+    return res.status(403).send("Incorrect password");
+  }
+
+  res.cookie('user_id', userIndentifier(userEmail).id);
   res.redirect("/urls");
 });
-
 
 app.get("/login", (req,res) => {
   const templateVars = {
@@ -69,17 +84,21 @@ app.get("/login", (req,res) => {
   res.render("urls_login", templateVars);
 });
 
+
+
+// Routing for /logout
 app.post("/logout", (req, res) => {
-  res.clearCookie('username');
-  res.redirect("/urls");
+  res.clearCookie('user_id');
+  res.redirect("/login");
 });
 
+
+// Routing for /urls
 app.get("/urls", (req, res) => {
   const templateVars = { 
     user: users[req.cookies['user_id']],
     urls: urlDatabase
     };
-
   res.render('urls_index', templateVars);
 });
 
@@ -87,14 +106,10 @@ app.post("/urls", (req, res) => {
   const shortURL = generateRandomString();
   urlDatabase[shortURL] = req.body.longURL;
   res.redirect("/urls/" + shortURL);
-
 });
 
-app.get("/urls/new", (req, res) => {
-  const templateVars = { user: users[req.cookies['user_id']] }
-  res.render("urls_new", templateVars);
-});
 
+// Routing for /register
 app.get("/register", (req, res) => {
   const templateVars = {user: users[req.cookies['user_id']]}
 
@@ -126,6 +141,15 @@ app.post("/register", (req, res) => {
   res.redirect("/urls");
 });
 
+
+// Routing for /urls/new
+app.get("/urls/new", (req, res) => {
+  const templateVars = { user: users[req.cookies['user_id']] }
+  res.render("urls_new", templateVars);
+});
+
+
+// Routing for /urls/:id
 app.get("/urls/:id", (req, res) => {
   const templateVars = { 
     user: users[req.cookies['user_id']],
@@ -141,11 +165,15 @@ app.post("/urls/:id", (req, res) => {
   res.redirect("/urls")
 });
 
+
+// Routing for /u/:id
 app.get("/u/:id", (req, res) => {
   // const longURL = ...
   const longURL = urlDatabase[req.params.id];
   res.redirect(longURL);
 });
+
+// Routing for /urls/:id/delete
 
 app.post("/urls/:id/delete", (req,res) => {
   delete urlDatabase[req.params.id];

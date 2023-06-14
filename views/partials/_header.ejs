@@ -19,17 +19,20 @@
         <a class="nav-item nav-link" href="/register">Register</a>
         <a class="nav-item nav-link" href="/login">Login</a>
       </div>
+      
     </div>
+    
   
-
-
     <% if (user) { %>
-      <h4>Logged in as: <%=user.email%> </h4>
+      <a class="navbar-brand ">Logged in as: <%=user.email%></a>
+      &nbsp
+      &nbsp
       <form method="POST" action="/logout">
-        <button type="submit">Logout</button>
+        <button type="submit"class="btn btn-primary">Logout</button>
       </form>
     <% } else { %>
         
     <% } %>
   </nav>
+  
 </header>
