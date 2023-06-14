@@ -179,7 +179,9 @@ app.post("/urls/:id", (req, res) => {
 
 // Routing for /u/:id
 app.get("/u/:id", (req, res) => {
-  
+  if (!urlDatabase.hasOwnProperty(req.params.id)){
+    return res.send("<h2> this shortened url doesn't exist </h2>");
+  }
   // const longURL = ...
   const longURL = urlDatabase[req.params.id];
   res.redirect(longURL);
