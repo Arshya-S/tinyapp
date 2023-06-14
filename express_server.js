@@ -3,16 +3,12 @@ const cookieParser = require('cookie-parser');
 const app = express();
 const PORT = 8080; // default port 8080
 
-app.use(cookieParser());
 
-// Function to generate random 6 digit alpha-numeric code
-function generateRandomString() {
-  return Math.random().toString(36).substring(2,5);
-};
+
 
 app.set("view engine", "ejs");
 app.use(express.urlencoded({ extended: true }));
-
+app.use(cookieParser());
 
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
@@ -31,6 +27,27 @@ const users = {
     password: "hello",
   },
 };
+
+// Function for finding if a user is in the database by email
+function userIndentifier(emailInput) {
+  let foundUser = null;
+  for (const userId in users) {
+    const user = users[userId];
+    if (user.email === emailInput) {
+      foundUser = user;
+      return foundUser;
+    }
+  }
+
+  return foundUser;
+}
+
+
+// Function to generate random 6 digit alpha-numeric code
+function generateRandomString() {
+  return Math.random().toString(36).substring(2,5);
+};
+
 
 app.get("/", (req, res) => {
   res.render("partials/_header.ejs");
@@ -79,10 +96,23 @@ app.get("/register", (req, res) => {
 
 app.post("/register", (req, res) => {
   const randomID = generateRandomString(); 
+  const userEmail = req.body.email;
+  const userPass = req.body.password;
+
+  // if user enters no email or no password
+  if (!userEmail || !userPass) {
+    return res.status(400).send('Please provide a username and password');
+  }
+
+  // return null if user not found, other wise user is returned which runs the if statement
+  if (userIndentifier(userEmail)) {
+    return res.status(400).send('The email is already in use.');
+  }
+
   users[randomID] = {
     id: randomID,
-    email: req.body.email,
-    password: req.body.password
+    email: userEmail,
+    password: userPass
   };
 
   res.cookie('user_id', randomID); 
