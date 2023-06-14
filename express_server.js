@@ -78,9 +78,11 @@ app.post("/login", (req, res) => {
 });
 
 app.get("/login", (req,res) => {
-  const templateVars = {
-    user: users[req.cookies['user_id']]
+  if (req.cookies.user_id) {
+    return res.redirect("/urls");
   }
+
+  const templateVars = {user: users[req.cookies['user_id']]}
   res.render("urls_login", templateVars);
 });
 
@@ -103,6 +105,9 @@ app.get("/urls", (req, res) => {
 });
 
 app.post("/urls", (req, res) => {
+  if (!req.cookies.user_id) {
+    return res.send("<h2>Must be logged in to shorten URLS</h2>");
+  }
   const shortURL = generateRandomString();
   urlDatabase[shortURL] = req.body.longURL;
   res.redirect("/urls/" + shortURL);
@@ -111,8 +116,11 @@ app.post("/urls", (req, res) => {
 
 // Routing for /register
 app.get("/register", (req, res) => {
-  const templateVars = {user: users[req.cookies['user_id']]}
+  if (req.cookies.user_id) {
+    return res.redirect("/urls");
+  }
 
+  const templateVars = {user: users[req.cookies['user_id']]}
   res.render("urls_registration", templateVars);
 });
 
@@ -144,6 +152,9 @@ app.post("/register", (req, res) => {
 
 // Routing for /urls/new
 app.get("/urls/new", (req, res) => {
+  if (!req.cookies.user_id) {
+    return res.redirect("/login");
+  }
   const templateVars = { user: users[req.cookies['user_id']] }
   res.render("urls_new", templateVars);
 });
@@ -168,6 +179,7 @@ app.post("/urls/:id", (req, res) => {
 
 // Routing for /u/:id
 app.get("/u/:id", (req, res) => {
+  
   // const longURL = ...
   const longURL = urlDatabase[req.params.id];
   res.redirect(longURL);
