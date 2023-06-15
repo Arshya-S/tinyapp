@@ -116,9 +116,9 @@ app.post("/logout", (req, res) => {
 // Routing for /urls
 app.get("/urls", (req, res) => {
 
-  if (!req.cookies.user_id) {
-    return res.send("<h2>Log in to access URLS page</h2>")
-  }
+  // if (!req.cookies.user_id) {
+  //   return res.send("<h2>Log in to access URLS page</h2>")
+  // }
 
   const templateVars = { 
     user: users[req.cookies['user_id']],
