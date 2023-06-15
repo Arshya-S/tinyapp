@@ -2,12 +2,19 @@ const express = require("express");
 const cookieParser = require('cookie-parser');
 const morgan = require('morgan');
 const bcrypt = require("bcryptjs");
+const cookieSession = require("cookie-session");
+const helperFunction = require("./helper");
 const app = express();
 const PORT = 8080; 
 
 app.set("view engine", "ejs");
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+app.use(cookieSession({
+  name: 'session',
+  keys: ['key1','key2','key3','key4'],
+  maxAge: 24 * 60 * 60 * 1000
+}))
 
 const urlDatabase = {
   b6UTxQ: {
@@ -33,19 +40,7 @@ const users = {
   },
 };
 
-// Function for finding if a user is in the database by email
-function userIndentifier(emailInput) {
-  let foundUser = null;
-  for (const userId in users) {
-    const user = users[userId];
-    if (user.email === emailInput) {
-      foundUser = user;
-      return foundUser;
-    }
-  }
-
-  return foundUser;
-}
+const getUserByEmail = helperFunction.getUserByEmail;
 
 // Function to generate random 6 digit alpha-numeric code
 function generateRandomString() {
@@ -67,7 +62,7 @@ function urlsForUser(id) {
 
 // Home Page
 app.get("/", (req, res) => {
-  res.render("partials/_header.ejs");
+  res.redirect("/login");
 });
 
 
@@ -82,32 +77,32 @@ app.post("/login", (req, res) => {
   const userEmail = req.body.email;
   const userPass = req.body.password;
   
-  if (!userIndentifier(userEmail)) {
+  if (!getUserByEmail(userEmail,users)) {
     return res.status(403).send("Email cannot be found");
   } 
 
-  if (!bcrypt.compareSync(userPass,userIndentifier(userEmail).password)) {
+  if (!bcrypt.compareSync(userPass,getUserByEmail(userEmail,users).password)) {
     return res.status(403).send("Incorrect password");
   }
 
-  res.cookie('user_id', userIndentifier(userEmail).id);
+  req.session.user_id = getUserByEmail(userEmail,users).id;
   res.redirect("/urls");
 });
 
 
 app.get("/login", (req,res) => {
-  if (req.cookies.user_id) {
+  if (req.session.user_id) {
     return res.redirect("/urls");
   }
 
-  const templateVars = {user: users[req.cookies['user_id']]}
+  const templateVars = {user: users[req.session.user_id]}
   res.render("urls_login", templateVars);
 });
 
 
 // Routing for /logout
 app.post("/logout", (req, res) => {
-  res.clearCookie('user_id');
+  req.session = null;
   res.redirect("/login");
 });
 
@@ -115,31 +110,35 @@ app.post("/logout", (req, res) => {
 // Routing for /urls
 app.get("/urls", (req, res) => {
 
+  if(!req.session.user_id) {
+    res.send("<h1> Must be logged in to access URLS page. </h1>");
+  }
+
   const templateVars = { 
-    user: users[req.cookies['user_id']],
+    user: users[req.session.user_id],
     urlDatabase: urlDatabase,
-    urlsOfUser: urlsForUser(req.cookies['user_id'])
+    urlsOfUser: urlsForUser(req.session.user_id)
     };
   res.render('urls_index', templateVars);
 });
 
 app.post("/urls", (req, res) => {
-  if (!req.cookies.user_id) {
+  if (!req.session.user_id) {
     return res.send("<h2>Must be logged in to shorten URLS</h2>");
   }
   const shortURL = generateRandomString();
-  urlDatabase[shortURL] = {longURL: req.body.longURL, userID: req.cookies.user_id}
+  urlDatabase[shortURL] = {longURL: req.body.longURL, userID: req.session.user_id}
   res.redirect("/urls/" + shortURL);
 });
 
 
 // Routing for /register
 app.get("/register", (req, res) => {
-  if (req.cookies.user_id) {
+  if (req.session.user_id) {
     return res.redirect("/urls");
   }
 
-  const templateVars = {user: users[req.cookies['user_id']]}
+  const templateVars = {user: users[req.session.user_id]}
   res.render("urls_registration", templateVars);
 });
 
@@ -152,7 +151,7 @@ app.post("/register", (req, res) => {
     return res.status(400).send('Please provide a username and password');
   }
   // return null if user not found, other wise user is returned which runs the if statement
-  if (userIndentifier(userEmail)) {
+  if (getUserByEmail(userEmail,users)) {
     return res.status(400).send('The email is already in use.');
   }
 
@@ -164,33 +163,33 @@ app.post("/register", (req, res) => {
 
   console.log(users);
 
-  res.cookie('user_id', randomID); 
+  req.session.user_id =  randomID; 
   res.redirect("/urls");
 });
 
 
 // Routing for /urls/new
 app.get("/urls/new", (req, res) => {
-  if (!req.cookies.user_id) {
+  if (!req.session.user_id) {
     return res.redirect("/login");
   }
-  const templateVars = { user: users[req.cookies['user_id']] }
+  const templateVars = { user: users[req.session.user_id]}
   res.render("urls_new", templateVars);
 });
 
 
 // Routing for /urls/:id
 app.get("/urls/:id", (req, res) => {
-  if (!req.cookies.user_id) {
+  if (!req.session.user_id) {
     return res.send("<h2>Log in to access page</h2>")
   }
-  if (urlDatabase[req.params.id].userID !== req.cookies.user_id){
+  if (urlDatabase[req.params.id].userID !== req.session.user_id){
     return res.send("<h2>Access denined. This URL page doesn't belong to you.</h2>")
 
   }
 
   const templateVars = { 
-    user: users[req.cookies['user_id']],
+    user: users[req.session.user_id],
     id: req.params.id, 
     longURL: urlDatabase[req.params.id].longURL
   };
@@ -201,12 +200,12 @@ app.get("/urls/:id", (req, res) => {
 app.post("/urls/:id", (req, res) => {
 
   if(!(req.params.id in urlDatabase)){
-    return res.send("id does not exist")
+    return res.send("id does not exist \n")
   }
-  if(!req.cookies.user_id) {
-    return res.send("Must be logged in");
+  if(!req.session.user_id) {
+    return res.send("Must be logged in \n");
   }
-  if (urlDatabase[req.params.id].userID !== req.cookies.user_id){
+  if (urlDatabase[req.params.id].userID !== req.session.user_id){
     return res.send("<h2>Cannot edit as this url doesn't belong to you</h2>")
   }
 
@@ -229,12 +228,12 @@ app.get("/u/:id", (req, res) => {
 
 app.post("/urls/:id/delete", (req,res) => {
   if(!(req.params.id in urlDatabase)){
-    return res.send("id does not exist")
+    return res.send("id does not exist \n")
   }
-  if(!req.cookies.user_id) {
-    return res.send("Must be logged in");
+  if(!req.session.user_id) {
+    return res.send("Must be logged in \n");
   }
-  if (urlDatabase[req.params.id].userID !== req.cookies.user_id){
+  if (urlDatabase[req.params.id].userID !== req.session.user_id){
     return res.send("<h2> you cannot delete this URL as it doesn't belong to you</h2>");
   }
 
@@ -245,6 +244,3 @@ app.post("/urls/:id/delete", (req,res) => {
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
-
-console.log(bcrypt.hashSync("1234"),10)
-console.log(bcrypt.hashSync("hello"),10)
