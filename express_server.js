@@ -9,8 +9,14 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  b6UTxQ: {
+    longURL: "https://www.tsn.ca",
+    userID: "aJ48lW",
+  },
+  i3BoGr: {
+    longURL: "https://www.google.ca",
+    userID: "ccc222",
+  },
 };
 
 const users = {
@@ -19,8 +25,8 @@ const users = {
     email: "a@a.com",
     password: "1234",
   },
-  aaabbb: {
-    id: "aaabbb",
+  aJ48lW: {
+    id: "aJ48lW",
     email: "b@b.com",
     password: "hello",
   },
@@ -44,6 +50,18 @@ function userIndentifier(emailInput) {
 function generateRandomString() {
   return Math.random().toString(36).substring(2,5);
 };
+
+function urlsForUser(id) {
+  let urlObj = []
+
+  for (const url in urlDatabase) {
+    if (urlDatabase[url].userID === id) {
+      urlObj.push(url)
+    }
+  }
+
+  return urlObj;
+}
 
 
 
@@ -97,9 +115,15 @@ app.post("/logout", (req, res) => {
 
 // Routing for /urls
 app.get("/urls", (req, res) => {
+
+  if (!req.cookies.user_id) {
+    return res.send("<h2>Log in to access URLS page</h2>")
+  }
+
   const templateVars = { 
     user: users[req.cookies['user_id']],
-    urls: urlDatabase
+    urlDatabase: urlDatabase,
+    urlsOfUser: urlsForUser(req.cookies['user_id'])
     };
   res.render('urls_index', templateVars);
 });
@@ -109,7 +133,7 @@ app.post("/urls", (req, res) => {
     return res.send("<h2>Must be logged in to shorten URLS</h2>");
   }
   const shortURL = generateRandomString();
-  urlDatabase[shortURL] = req.body.longURL;
+  urlDatabase[shortURL] = {longURL: req.body.longURL, userID: req.cookies.user_id}
   res.redirect("/urls/" + shortURL);
 });
 
@@ -162,17 +186,47 @@ app.get("/urls/new", (req, res) => {
 
 // Routing for /urls/:id
 app.get("/urls/:id", (req, res) => {
+  if (!req.cookies.user_id) {
+    return res.send("<h2>Log in to access page</h2>")
+  }
+
+  console.log(urlDatabase)
+
+  if (urlDatabase[req.params.id].userID !== req.cookies.user_id){
+    return res.send("<h2>Access denined. This URL page doesn't belong to you.</h2>")
+
+  }
+
+  
+
   const templateVars = { 
     user: users[req.cookies['user_id']],
     id: req.params.id, 
-    longURL: urlDatabase[req.params.id]
+    longURL: urlDatabase[req.params.id].longURL
   };
 
   res.render('urls_show', templateVars);
 });
 
 app.post("/urls/:id", (req, res) => {
-  urlDatabase[req.params.id] = req.body.longURL;
+
+  if(!(req.params.id in urlDatabase)){
+    return res.send("id does not exist")
+  }
+
+  if(!req.cookies.user_id) {
+    return res.send("Must be logged in");
+  }
+
+
+  if (urlDatabase[req.params.id].userID !== req.cookies.user_id){
+    return res.send("<h2>Cannot edit as this url doesn't belong to you</h2>")
+  }
+
+ 
+
+
+  urlDatabase[req.params.id].longURL = req.body.longURL;
   res.redirect("/urls")
 });
 
@@ -182,14 +236,29 @@ app.get("/u/:id", (req, res) => {
   if (!urlDatabase.hasOwnProperty(req.params.id)){
     return res.send("<h2> this shortened url doesn't exist </h2>");
   }
-  // const longURL = ...
-  const longURL = urlDatabase[req.params.id];
+
+  const longURL = urlDatabase[req.params.id].longURL;
   res.redirect(longURL);
 });
 
 // Routing for /urls/:id/delete
 
 app.post("/urls/:id/delete", (req,res) => {
+  if(!(req.params.id in urlDatabase)){
+    return res.send("id does not exist")
+  }
+
+  if(!req.cookies.user_id) {
+    return res.send("Must be logged in");
+  }
+
+  if (urlDatabase[req.params.id].userID !== req.cookies.user_id){
+    return res.send("<h2> you cannot delete this URL as it doesn't belong to you</h2>");
+  }
+
+  
+  
+  
   delete urlDatabase[req.params.id];
   res.redirect("/urls");
 });
