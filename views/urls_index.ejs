@@ -31,7 +31,7 @@
         <tbody>
           <% for (let url of urlsOfUser) { %>
             <tr>
-              <td><%= url %></td>
+              <td><a href="/u/<%= url %>"><%= url %></a></td>
               <td><%= urlDatabase[url].longURL %></td>
               <form method="GET" action="urls/<%= url %>/">
                 <td><button type="submit" class="btn btn-primary">Edit</button></td>

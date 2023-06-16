@@ -183,9 +183,13 @@ app.get("/urls/:id", (req, res) => {
   if (!req.session.user_id) {
     return res.send("<h2>Log in to access page</h2>")
   }
+  if (!urlDatabase[req.params.id]) {
+    return res.send("This URL does not exist. Please try a different one.")
+  }
+
+
   if (urlDatabase[req.params.id].userID !== req.session.user_id){
     return res.send("<h2>Access denined. This URL page doesn't belong to you.</h2>")
-
   }
 
   const templateVars = { 
@@ -216,7 +220,7 @@ app.post("/urls/:id", (req, res) => {
 
 // Routing for /u/:id
 app.get("/u/:id", (req, res) => {
-  if (!urlDatabase.hasOwnProperty(req.params.id)){
+  if (!urlDatabase[req.params.id]){
     return res.send("<h2> this shortened url doesn't exist </h2>");
   }
 
